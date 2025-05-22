@@ -103,8 +103,6 @@ This will generate everything under `generated/`, and print output like:
 
 ## ✅ Next Steps
 
-Once `agent.x86_64.iso` is booted and the node is online, use `ansible/playbook.yml` (TBD) to finalize the setup.
-
 To login into the cluster:
 ```
 $ export KUBECONFIG=deployment/auth/kubeconfig
