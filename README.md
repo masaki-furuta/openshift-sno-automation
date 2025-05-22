@@ -108,10 +108,8 @@ Once `agent.x86_64.iso` is booted and the node is online, use `ansible/playbook.
 
 To login into the cluster:
 
-```
 $ export KUBECONFIG=deployment/auth/kubeconfig
 $ oc login -u kubeadmin -p "$PASSWORD" "$API_URL" --insecure-skip-tls-verify
-```
 
 ---
 
