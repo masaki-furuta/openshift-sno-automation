@@ -1,4 +1,3 @@
-```markdown
 # 🚀 openshift-sno-automation
 
 A self-contained automation project to set up a **Single Node OpenShift (SNO)** cluster for OpenShift 4.18 on a **Fedora 42 Server** running in **VirtualBox**.  
@@ -10,7 +9,7 @@ This project offers a lightweight alternative to full-blown templating by **dire
 
 ## 📁 Project Structure
 
-
+```
 openshift-sno-automation/
 ├── ansible/                     # Ansible playbooks to drive installation
 ├── contrib/                     # Helper scripts (VirtualBox, CLI tools, kickstart)
@@ -22,7 +21,7 @@ openshift-sno-automation/
 │   ├── id_rsa.pub
 │   └── pull-secret.txt
 ├── create-openshift-sno-structure_v83.sh  # Main script for generating structure and configs
-
+```
 
 ---
 
@@ -107,9 +106,89 @@ This will generate everything under `generated/`, and print output like:
 Once `agent.x86_64.iso` is booted and the node is online, use `ansible/playbook.yml` (TBD) to finalize the setup.
 
 To login into the cluster:
-
+```
 $ export KUBECONFIG=deployment/auth/kubeconfig
 $ oc login -u kubeadmin -p "$PASSWORD" "$API_URL" --insecure-skip-tls-verify
+```
+---
+## 🧪 First Run Example
+
+After downloading the following files into your working directory:
+
+- `create-openshift-sno-structure_v87.sh`
+- `install-openshift-bin_v3.sh`
+- `install-virtualbox-vnc.sh`
+- `oc-login_v4.sh`
+- `select-failed-pods-to-delete.sh`
+- `tp-fan-control.sh`
+- `id_rsa.pub`
+- `pull-secret.txt`
+
+You can execute the main script. Here's what the initial run typically looks like:
+
+```bash
+# ./create-openshift-sno-structure_v87.sh 
+Creating directories...
+Creating files with template content...
+Delete openshift-sno-automation/deployment/* and dotfiles? (y/N)
+
+All directories and files with content have been created successfully.
+
+openshift-sno-automation
+├── ansible
+│   ├── files
+│   ├── group_vars
+│   ├── inventory.yaml
+│   └── playbooks
+│       ├── 01_configure_tmux_and_env.yaml
+│       ├── 02_create_agent_iso.yaml
+│       ├── 03_create_virtualbox_vm.yaml
+│       ├── 04_prepare_hypervisor_dns.yaml
+│       ├── 05_wait_for_sno1_boot.yaml
+│       ├── 06_check_node_ready.yaml
+│       └── site.yaml
+├── contrib
+│   ├── install-openshift-bin_v3.sh
+│   ├── install-virtualbox-vnc.sh
+│   ├── oc-login_v4.sh
+│   ├── select-failed-pods-to-delete.sh
+│   └── tp-fan-control.sh
+├── deployment
+│   ├── agent-config.yaml
+│   ├── agent.x86_64.iso
+│   ├── auth
+│   │   ├── kubeadmin-password
+│   │   └── kubeconfig
+│   ├── install-config.yaml
+│   ├── openshift
+│   │   ├── 98-core-passwd.yaml
+│   │   └── 99-sno1-set-kargs.yaml
+│   ├── previous-run
+│   │   ├── agent-config.yaml
+│   │   ├── agent.x86_64.iso
+│   │   ├── auth
+│   │   │   ├── kubeadmin-password
+│   │   │   └── kubeconfig
+│   │   ├── install-config.yaml
+│   │   └── openshift
+│   │       ├── 98-core-passwd.yaml
+│   │       └── 99-sno1-set-kargs.yaml
+│   └── rendezvousIP
+└── secrets
+    ├── id_rsa.pub
+    └── pull-secret.txt
+
+13 directories, 30 files
+
+Run: ansible-playbook -v -i openshift-sno-automation/ansible/inventory.yaml \
+openshift-sno-automation/ansible/playbooks/site.yaml
+Do you want to run this command? (y/N): 
+Canceled.
+```
+
+This script sets up the full structure and prepares everything needed to proceed with Ansible-driven automation.
+
+---
 
 ---
 
