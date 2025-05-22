@@ -124,7 +124,7 @@ After downloading the following files into your working directory:
 
 You can execute the main script. Here's what the initial run typically looks like:
 
-```bash
+```
 # ./create-openshift-sno-structure_v87.sh 
 Creating directories...
 Creating files with template content...
@@ -188,8 +188,6 @@ This script sets up the full structure and prepares everything needed to proceed
 
 ---
 
----
-
 ## 📜 License
 
 MIT License. See `LICENSE` file for details.
@@ -200,4 +198,3 @@ MIT License. See `LICENSE` file for details.
 
 Masaki Furuta (GitHub: [masaki-furuta](https://github.com/masaki-furuta))  
 Feel free to open Issues or PRs for suggestions.
-```
