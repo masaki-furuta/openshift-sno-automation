@@ -39,7 +39,6 @@ The main script `create-openshift-sno-structure_v83.sh` performs the following:
   - `install-config.yaml`
   - `agent-config.yaml`
   - `agent.x86_64.iso` (boot media)
-  - ignition config  - NMState network YAML files via `openshift-install`
   - Password-injection manifest (`98-core-passwd.yaml`)
   - kargs set manifest (`99-sno-set-kargs.yaml`)
 - Detects and uses predefined cluster name and base domain
