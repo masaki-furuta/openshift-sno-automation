@@ -1,6 +1,6 @@
 # 🚀 openshift-sno-automation
 
-A self-contained automation project to set up a **Single Node OpenShift (SNO)** cluster for OpenShift 4.18 on a **Fedora 42 Server** running in **VirtualBox**.  
+A self-contained automation project to set up a **Single Node OpenShift (SNO)** cluster for OpenShift 4.18 on a **VirtualBox** running on **Fedora 42 Server**.  
 The setup is ideal for reproducible, isolated local labs using bridge-mode networking.
 
 This project offers a lightweight alternative to full-blown templating by **directly generating YAML and Ansible configurations via Bash scripting**, focusing on clarity and version-controlled structure.
