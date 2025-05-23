@@ -18,7 +18,7 @@ openshift-sno-automation/
 ├── 📂 deployment/                  # 📦 All generated files (install-config, manifests, ignition, ISO)
 │   ├── 🔐 auth/                    # 🔑 kubeadmin credentials, kubeconfig
 │   ├── 🕒 previous-run/            # 🗂️ Timestamped backups of previous runs
-│   └── 🧾 manifests/               # 🧩 Custom OpenShift manifests
+│   └── 🧾 openshift/               # 🧩 Custom OpenShift manifests
 │
 ├── 📂 secrets/                     # 🔐 SSH keys and pull-secret.txt (manually placed)
 │   ├── 🔑 id_rsa.pub
