@@ -50,19 +50,13 @@ SNO_MAC_ADDR=$(grep -E '^ *mac_addr:' "$ROOT_DIR/ansible/inventory.yaml"|cut -d:
 SNO_DNS=$(grep      -E '^ *dns:'      "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
 SNO_GATEWAY=$(grep  -E '^ *gateway:'  "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
 
-cd secrets/
-cp pull-secret.txt id_rsa.pub "$ROOT_DIR/secrets/"
-cd -
+cp secrets/{id_rsa.pub,pull-secret.txt} "$ROOT_DIR/secrets/"
 PULL_SECRET_CONTENT=$(cat "$ROOT_DIR/secrets/pull-secret.txt")
 SSH_KEY_CONTENT=$(cat "$ROOT_DIR/secrets/id_rsa.pub")
 
-cd contrib/
-cp install-openshift-bin_v3.sh  install-virtualbox-vnc.sh  oc-login_v4.sh  select-failed-pods-to-delete.sh  tp-fan-control.sh "$ROOT_DIR/contrib/"
-cd -
+cp contrib/{install-openshift-bin.sh,install-virtualbox-vnc.sh,oc-login.sh,select-failed-pods-to-delete.sh,tp-fan-control.sh} "$ROOT_DIR/contrib/"
 
-cd devel
-cp new-version.sh "$ROOT_DIR/devel/"
-cd -
+cp devel/new-version.sh "$ROOT_DIR/devel/"
 
 echo "Delete $ROOT_DIR/deployment/* and dotfiles? (y/N)"
 read -r ans

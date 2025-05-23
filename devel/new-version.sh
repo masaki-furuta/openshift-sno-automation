@@ -5,7 +5,7 @@ set -euo pipefail
 # Configuration
 # =======================
 ROOT_DIR="openshift-sno-automation"
-CURRENT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+CURRENT_DIR="$(pwd)"
 SCRIPT_DIR="$CURRENT_DIR/$ROOT_DIR"
 OLD_DIR="$CURRENT_DIR/old-scripts"
 
