@@ -92,7 +92,6 @@ This will generate everything under `generated/`, and print output like:
 - `deployment/agent.x86_64.iso`: Bootable ISO for the SNO node
 - `deployment/openshift/*.yaml`: Hostname + password override manifests
 - `deployment/auth/`: Includes `kubeadmin-password`, `kubeconfig`
-- `ansible/*.yml`: Playbooks to automate next steps
 
 ---
 
