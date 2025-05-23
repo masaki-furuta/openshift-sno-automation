@@ -11,16 +11,20 @@ This project offers a lightweight alternative to full-blown templating by **dire
 
 ```
 openshift-sno-automation/
-├── ansible/                     # Ansible playbooks to drive installation
-├── contrib/                     # Helper scripts (VirtualBox, CLI tools, kickstart)
-├── deployment/                  # All generated files (install-config, manifests, ignition, ISO)
-│   ├── auth/                    # kubeadmin credentials, kubeconfig
-│   ├── previous-run/            # Timestamped backups of previous runs
-│   └──  manifests/              # Custom OpenShift manifests
-├── secrets/                     # SSH keys and pull-secret.txt (manually placed)
-│   ├── id_rsa.pub
-│   └── pull-secret.txt
-├── create-openshift-sno-structure_v83.sh  # Main script for generating structure and configs
+├── 📂 ansible/                     # 📜 Ansible playbooks to drive installation
+│
+├── 📂 contrib/                     # 🛠️ Helper scripts (VirtualBox, CLI tools, kickstart)
+│
+├── 📂 deployment/                  # 📦 All generated files (install-config, manifests, ignition, ISO)
+│   ├── 🔐 auth/                    # 🔑 kubeadmin credentials, kubeconfig
+│   ├── 🕒 previous-run/            # 🗂️ Timestamped backups of previous runs
+│   └── 🧾 manifests/               # 🧩 Custom OpenShift manifests
+│
+├── 📂 secrets/                     # 🔐 SSH keys and pull-secret.txt (manually placed)
+│   ├── 🔑 id_rsa.pub
+│   └── 🧾 pull-secret.txt
+│
+└── 🧰 create-openshift-sno-structure_v88.sh  # 🚀 Main script for generating structure and configs
 ```
 
 ---
