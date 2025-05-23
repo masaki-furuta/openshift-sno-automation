@@ -7,7 +7,7 @@ This project offers a lightweight alternative to full-blown templating by **dire
 
 ---
 
-## 📁 Project Structure
+## 📁 Directory Structure
 
 ```
 openshift-sno-automation/
