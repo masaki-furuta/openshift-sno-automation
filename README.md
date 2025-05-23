@@ -125,7 +125,7 @@ After downloading the following files into your working directory:
 You can execute the main script. Here's what the initial run typically looks like:
 
 ```
-# ./create-openshift-sno-structure_v87.sh 
+# ./create-openshift-sno-structure_v88.sh 
 Creating directories...
 Creating files with template content...
 Delete openshift-sno-automation/deployment/* and dotfiles? (y/N)
@@ -134,17 +134,18 @@ All directories and files with content have been created successfully.
 
 openshift-sno-automation
 ├── ansible
-│   ├── files
 │   ├── group_vars
 │   ├── inventory.yaml
-│   └── playbooks
-│       ├── 01_configure_tmux_and_env.yaml
-│       ├── 02_create_agent_iso.yaml
-│       ├── 03_create_virtualbox_vm.yaml
-│       ├── 04_prepare_hypervisor_dns.yaml
-│       ├── 05_wait_for_sno1_boot.yaml
-│       ├── 06_check_node_ready.yaml
-│       └── site.yaml
+│   ├── playbooks
+│   │   ├── 01_generate_timestamp.yml
+│   │   ├── 02_configure_tmux_and_env.yaml
+│   │   ├── 03_create_agent_iso.yaml
+│   │   ├── 04_prepare_hypervisor_dns.yaml
+│   │   ├── 05_create_virtualbox_vm.yaml
+│   │   ├── 06_check_node_ready.yaml
+│   │   └── site.yaml
+│   └── vars
+│       └── timestamp.yml
 ├── contrib
 │   ├── install-openshift-bin_v3.sh
 │   ├── install-virtualbox-vnc.sh
@@ -153,35 +154,46 @@ openshift-sno-automation
 │   └── tp-fan-control.sh
 ├── deployment
 │   ├── agent-config.yaml
-│   ├── agent.x86_64.iso
-│   ├── auth
-│   │   ├── kubeadmin-password
-│   │   └── kubeconfig
 │   ├── install-config.yaml
 │   ├── openshift
 │   │   ├── 98-core-passwd.yaml
 │   │   └── 99-sno1-set-kargs.yaml
-│   ├── previous-run
-│   │   ├── agent-config.yaml
-│   │   ├── agent.x86_64.iso
-│   │   ├── auth
-│   │   │   ├── kubeadmin-password
-│   │   │   └── kubeconfig
-│   │   ├── install-config.yaml
-│   │   └── openshift
-│   │       ├── 98-core-passwd.yaml
-│   │       └── 99-sno1-set-kargs.yaml
-│   └── rendezvousIP
+│   ├── .openshift_install.log
+│   └── previous-run
+│       ├── 2025-05-23_07-05
+│       │   ├── agent-config.yaml
+│       │   ├── agent.x86_64.iso
+│       │   ├── auth
+│       │   │   ├── kubeadmin-password
+│       │   │   └── kubeconfig
+│       │   ├── install-config.yaml
+│       │   ├── openshift
+│       │   │   ├── 98-core-passwd.yaml
+│       │   │   └── 99-sno1-set-kargs.yaml
+│       │   ├── .openshift_install.log
+│       │   └── .openshift_install_state.json
+│       ├── 2025-05-23_09-59
+│       │   ├── agent-config.yaml
+│       │   ├── install-config.yaml
+│       │   └── openshift
+│       │       ├── 98-core-passwd.yaml
+│       │       └── 99-sno1-set-kargs.yaml
+│       └── 2025-05-23_10-04
+│           ├── agent-config.yaml
+│           ├── install-config.yaml
+│           └── openshift
+│               ├── 98-core-passwd.yaml
+│               └── 99-sno1-set-kargs.yaml
 └── secrets
     ├── id_rsa.pub
     └── pull-secret.txt
 
-13 directories, 30 files
+17 directories, 38 files
 
-Run: ansible-playbook -v -i openshift-sno-automation/ansible/inventory.yaml \
-openshift-sno-automation/ansible/playbooks/site.yaml
+Run: ansible-playbook -v -i openshift-sno-automation/ansible/inventory.yaml openshift-sno-automation/ansible/playbooks/site.yaml
 Do you want to run this command? (y/N): 
 Canceled.
+
 ```
 
 This script sets up the full structure and prepares everything needed to proceed with Ansible-driven automation.
