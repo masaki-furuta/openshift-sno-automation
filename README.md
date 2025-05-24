@@ -1,6 +1,6 @@
 # 🚀 openshift-sno-automation
 
-A self-contained automation project to set up a **Single Node OpenShift (SNO)** cluster for OpenShift 4.18 on a **VirtualBox** running on **Fedora 42 Server**.  
+A self-contained automation project to set up a **Single Node OpenShift (SNO)** cluster for OpenShift 4.18 on a **VirtualBox** running on **Fedora 42 Server**.
 The setup is ideal for reproducible, isolated local labs using bridge-mode networking.
 
 This project offers a lightweight alternative to full-blown templating by **directly generating YAML and Ansible configurations via Bash scripting**, focusing on clarity and version-controlled structure.
@@ -24,14 +24,14 @@ openshift-sno-automation/
 │   ├── 🔑 id_rsa.pub
 │   └── 🧾 pull-secret.txt
 │
-└── 🧰 create-openshift-sno-structure_v88.sh  # 🚀 Main script for generating structure and configs
+└── 🧰 create-openshift-sno-structure.sh  # 🚀 Main script for generating structure and configs
 ```
 
 ---
 
 ## 🔧 What This Script Does
 
-The main script `create-openshift-sno-structure_v83.sh` performs the following:
+The main script `create-openshift-sno-structure.sh` performs the following:
 
 - Creates and sanitizes the working directory layout
 - Copies the user-provided `id_rsa.pub` and `pull-secret.txt` into `secrets/`
@@ -73,12 +73,13 @@ cp ~/Downloads/pull-secret.txt secrets/pull-secret.txt
 ### 4. Run the setup script
 
 ```
-$ bash ./create-openshift-sno-structure_v83.sh
+$ bash ./create-openshift-sno-structure.sh
 ```
 
-This will generate everything under `generated/`, and print output like:
+This will generate everything under `deployment/`, and print output like:
 
 ```
+✅ agent-config.yaml created.
 ✅ install-config.yaml created.
 ✅ ignition files generated.
 ✅ agent.x86_64.iso created.
@@ -115,10 +116,10 @@ $ oc login -u kubeadmin -p "$PASSWORD" "$API_URL" --insecure-skip-tls-verify
 
 After downloading the following files into your working directory:
 
-- `create-openshift-sno-structure_v87.sh`
-- `install-openshift-bin_v3.sh`
+- `create-openshift-sno-structure.sh`
+- `install-openshift-bin.sh`
 - `install-virtualbox-vnc.sh`
-- `oc-login_v4.sh`
+- `oc-login.sh`
 - `select-failed-pods-to-delete.sh`
 - `tp-fan-control.sh`
 - `id_rsa.pub`
@@ -127,7 +128,7 @@ After downloading the following files into your working directory:
 You can execute the main script. Here's what the initial run typically looks like:
 
 ```
-# ./create-openshift-sno-structure_v88.sh 
+# ./create-openshift-sno-structure.sh
 Creating directories...
 Creating files with template content...
 Delete openshift-sno-automation/deployment/* and dotfiles? (y/N)
@@ -149,9 +150,9 @@ openshift-sno-automation
 │   └── vars
 │       └── timestamp.yml
 ├── contrib
-│   ├── install-openshift-bin_v3.sh
+│   ├── install-openshift-bin.sh
 │   ├── install-virtualbox-vnc.sh
-│   ├── oc-login_v4.sh
+│   ├── oc-login.sh
 │   ├── select-failed-pods-to-delete.sh
 │   └── tp-fan-control.sh
 ├── deployment
