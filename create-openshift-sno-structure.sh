@@ -317,8 +317,8 @@ cat > "$ROOT_DIR/ansible/playbooks/03_create_agent_iso.yaml" <<EOF
       poll: 0
 EOF
 
-# 04_prepare_hypervisor_dns.yaml
-cat > "$ROOT_DIR/ansible/playbooks/04_prepare_hypervisor_dns.yaml" <<EOF
+# 04_configure_hypervisor_access.yaml
+cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
 ---
 # Prepare DNS and SSH settings on hypervisor
 - name: Configure SSH settings for root
@@ -342,29 +342,21 @@ cat > "$ROOT_DIR/ansible/playbooks/04_prepare_hypervisor_dns.yaml" <<EOF
         group: root
         mode: '0644'
 
-- name: Setup systemd-resolved for sno-cluster
+- name: Add /etc/hosts entries for sno-cluster
   hosts: localhost
   become: true
   gather_facts: false
   tasks:
-    - name: Create resolved.conf.d directory
-      file:
-        path: /etc/systemd/resolved.conf.d
-        state: directory
-
-    - name: Configure DNS
-      copy:
-        dest: /etc/systemd/resolved.conf.d/sno-cluster.conf
-        content: |
-          [Resolve]
-          DNS={{ hostvars['sno1'].ip }} 1.1.1.1
-          Domains=sno-cluster.local apps.sno-cluster.local
-
-    - name: Restart systemd-resolved
-      systemd:
-        name: systemd-resolved
-        state: restarted
-        enabled: true
+    - name: Add SNO DNS entries to /etc/hosts
+      lineinfile:
+        path: /etc/hosts
+        line: "{{ item }}"
+        state: present
+      loop:
+        - "192.168.1.100 sno1.sno-cluster.local"
+        - "192.168.1.100 api.sno-cluster.local"
+        - "192.168.1.100 oauth-openshift.apps.sno-cluster.local"
+        - "192.168.1.100 console-openshift-console.apps.sno-cluster.local"
 EOF
 
 # 05_create_virtualbox_vm.yaml
@@ -468,7 +460,7 @@ cat > "$ROOT_DIR/ansible/playbooks/site.yaml" <<EOF
 - import_playbook: 01_generate_timestamp.yml
 - import_playbook: 02_configure_tmux_and_env.yaml
 - import_playbook: 03_create_agent_iso.yaml
-- import_playbook: 04_prepare_hypervisor_dns.yaml
+- import_playbook: 04_configure_hypervisor_access.yaml
 - import_playbook: 05_create_virtualbox_vm.yaml
 - import_playbook: 06_check_node_ready.yaml
 EOF
