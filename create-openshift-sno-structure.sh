@@ -96,6 +96,9 @@ kind: AgentConfig
 metadata:
   name: sno-cluster
 rendezvousIP: $SNO_IP
+additionalNTPSources:
+  - 0.rhel.pool.ntp.org
+  - 1.rhel.pool.ntp.org
 hosts:
   - hostname: sno1
     role: master
@@ -338,6 +341,9 @@ cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
               StrictHostKeyChecking no
               UserKnownHostsFile    /dev/null
               LogLevel              QUIET
+              CanonicalizeHostname yes
+              CanonicalDomains local
+              CanonicalizeFallbackLocal yes
         owner: root
         group: root
         mode: '0644'
@@ -355,6 +361,7 @@ cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
       loop:
         - "192.168.1.100 sno1.sno-cluster.local"
         - "192.168.1.100 api.sno-cluster.local"
+        - "192.168.1.100 api-int.sno-cluster.local"
         - "192.168.1.100 oauth-openshift.apps.sno-cluster.local"
         - "192.168.1.100 console-openshift-console.apps.sno-cluster.local"
 EOF
@@ -427,9 +434,9 @@ cat > "$ROOT_DIR/ansible/playbooks/06_check_node_ready.yaml" <<'EOF'
       set_fact:
         backup_path: "../../deployment/previous-run/{{ backup_time }}"
   
-    - name: Pause for 3600 seconds
+    - name: Pause for 3000 seconds
       pause:
-        seconds: 3600
+        seconds: 3000
 
     - name: Backup install log files from deployment to backup
       copy:
