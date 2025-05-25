@@ -54,8 +54,21 @@ cp secrets/{id_rsa.pub,pull-secret.txt} "$ROOT_DIR/secrets/"
 PULL_SECRET_CONTENT=$(cat "$ROOT_DIR/secrets/pull-secret.txt")
 SSH_KEY_CONTENT=$(cat "$ROOT_DIR/secrets/id_rsa.pub")
 
-cp contrib/{install-openshift-bin.sh,install-virtualbox-vnc.sh,oc-login.sh,select-failed-pods-to-delete.sh,tp-fan-control.sh,set-max-cpu-speed.sh} "$ROOT_DIR/contrib/"
+SCRIPTS=(
+  install-openshift-bin.sh
+  install-virtualbox-vnc.sh
+  oc-login.sh
+  select-failed-pods-to-delete.sh
+  tp-fan-control.sh
+  set-max-cpu-speed.sh
+)
 
+echo "Copying contrib scripts..."
+for script in "${SCRIPTS[@]}"; do
+  cp "contrib/${script}" "$ROOT_DIR/contrib/"
+done
+
+echo "Copying devel scripts..."
 cp devel/new-version.sh "$ROOT_DIR/devel/"
 
 echo "Delete $ROOT_DIR/deployment/* and dotfiles? (y/N)"
