@@ -180,8 +180,8 @@ spec:
             WantedBy=multi-user.target
 EOF
 
-# common/timer_start.yml
-cat > "$ROOT_DIR/ansible/common/timer_start.yml" <<EOF
+# common/timer_start.yaml
+cat > "$ROOT_DIR/ansible/common/timer_start.yaml" <<EOF
 ---
 - name: "Record start time for {{ play_description | default(playbook_dir) }}"
   set_fact:
@@ -202,8 +202,8 @@ cat > "$ROOT_DIR/ansible/common/timer_start.yml" <<EOF
   run_once: true
 EOF
 
-# common/timer_end.yml
-cat > "$ROOT_DIR/ansible/common/timer_end.yml" <<EOF
+# common/timer_end.yaml
+cat > "$ROOT_DIR/ansible/common/timer_end.yaml" <<EOF
 ---
 - name: "Record end time for {{ play_description | default(playbook_dir) }}"
   set_fact:
@@ -236,24 +236,24 @@ cat > "$ROOT_DIR/ansible/common/timer_end.yml" <<EOF
   run_once: true
 EOF
 
-# 01_generate_timestamp.yml
-cat > "$ROOT_DIR/ansible/playbooks/01_generate_timestamp.yml" <<EOF
+# 01_generate_timestamp.yaml
+cat > "$ROOT_DIR/ansible/playbooks/01_generate_timestamp.yaml" <<EOF
 ---
 - name: Generate timestamp variable and save to file
   hosts: localhost
   gather_facts: false
   vars:
-    play_description: "(01_generate_timestamp.yml)"
+    play_description: "(01_generate_timestamp.yaml)"
   pre_tasks:
-    - import_tasks: ../common/timer_start.yml
+    - import_tasks: ../common/timer_start.yaml
   tasks:
     - name: Generate timestamp and save to vars file
       copy:
-        dest: "../vars/timestamp.yml"
+        dest: "../vars/timestamp.yaml"
         content: |
           backup_time: "{{ lookup('pipe', 'date +%Y-%m-%d_%H-%M') }}"
   post_tasks:
-    - import_tasks: ../common/timer_end.yml
+    - import_tasks: ../common/timer_end.yaml
 EOF
 
 # 02_configure_tmux_and_env.yaml
@@ -267,7 +267,7 @@ cat > "$ROOT_DIR/ansible/playbooks/02_configure_tmux_and_env.yaml" <<EOF
   vars:
     play_description: "(02_configure_tmux_and_env.yaml)"
   pre_tasks:
-    - import_tasks: ../common/timer_start.yml
+    - import_tasks: ../common/timer_start.yaml
   tasks:
     - name: Check if tmux default command is already in ~/.tmux.conf
       stat:
@@ -325,7 +325,7 @@ cat > "$ROOT_DIR/ansible/playbooks/02_configure_tmux_and_env.yaml" <<EOF
       meta: end_play
       when: tmux_conf_file.stat.exists == false or bashrc_file.stat.exists == false
   post_tasks:
-    - import_tasks: ../common/timer_end.yml
+    - import_tasks: ../common/timer_end.yaml
 EOF
 
 # 03_create_agent_iso.yaml
@@ -336,9 +336,13 @@ cat > "$ROOT_DIR/ansible/playbooks/03_create_agent_iso.yaml" <<EOF
   hosts: localhost
   become: true
   gather_facts: false
+  vars:
+    play_description: "(03_create_agent_iso.yaml)"
+  pre_tasks:
+    - import_tasks: ../common/timer_start.yaml
   tasks:
     - name: Load shared timestamp
-      include_vars: "../vars/timestamp.yml"
+      include_vars: "../vars/timestamp.yaml"
 
     - name: Set backup_path
       set_fact:
@@ -389,6 +393,8 @@ cat > "$ROOT_DIR/ansible/playbooks/03_create_agent_iso.yaml" <<EOF
         tmux split-window -h "sleep 20;openshift-install --dir /root/ocp/openshift-sno-automation/deployment agent wait-for install-complete --log-level=debug;read -p 'Finished.'" \; resize-pane -L 50 \; split-window -h "bash" \; resize-pane -R 10 \; select-pane -t 2
       async: 10
       poll: 0
+  post_tasks:
+    - import_tasks: ../common/timer_end.yaml
 EOF
 
 # 04_configure_hypervisor_access.yaml
@@ -399,6 +405,10 @@ cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
   hosts: localhost
   become: true
   gather_facts: false
+  vars:
+    play_description: "(04_configure_hypervisor_access.yaml)"
+  pre_tasks:
+    - import_tasks: ../common/timer_start.yaml
   tasks:
     - name: Create /root/.ssh/config
       copy:
@@ -430,6 +440,8 @@ cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
         - "$SNO_IP api-int.sno-cluster.local"
         - "$SNO_IP oauth-openshift.apps.sno-cluster.local"
         - "$SNO_IP console-openshift-console.apps.sno-cluster.local"
+  post_tasks:
+    - import_tasks: ../common/timer_end.yaml
 EOF
 
 # 05_create_virtualbox_vm.yaml
@@ -439,6 +451,10 @@ cat > "$ROOT_DIR/ansible/playbooks/05_create_virtualbox_vm.yaml" <<EOF
 - name: Create VirtualBox VM for OpenShift
   hosts: localhost
   gather_facts: false
+  vars:
+    play_description: "(05_create_virtualbox_vm.yaml)"
+  pre_tasks:
+    - import_tasks: ../common/timer_start.yaml
   tasks:
     - name: Remove existing VM if exists
       shell: |
@@ -483,6 +499,8 @@ cat > "$ROOT_DIR/ansible/playbooks/05_create_virtualbox_vm.yaml" <<EOF
         VBoxManage startvm "{{ item }}" --type headless
       loop:
         - sno1
+  post_tasks:
+    - import_tasks: ../common/timer_end.yaml
 EOF
 
 # 06_check_node_ready.yaml
@@ -492,17 +510,33 @@ cat > "$ROOT_DIR/ansible/playbooks/06_check_node_ready.yaml" <<'EOF'
 - name: Wait for OpenShift nodes to become ready
   hosts: localhost
   gather_facts: false
+  vars:
+    play_description: "(06_check_node_ready.yaml)"
+  pre_tasks:
+    - import_tasks: ../common/timer_start.yaml
   tasks:
     - name: Load shared timestamp
-      include_vars: "../vars/timestamp.yml"
+      include_vars: "../vars/timestamp.yaml"
 
     - name: Set backup_path
       set_fact:
         backup_path: "../../deployment/previous-run/{{ backup_time }}"
 
-    - name: Pause for 3300 seconds
-      pause:
-        seconds: 3300
+    - name: Wait until cluster version becomes Available=True
+      shell: |
+        oc get clusterversion version -o jsonpath="{.status.conditions[?(@.type=='Available')].status}" --kubeconfig ../../deployment/auth/kubeconfig
+      register: result
+      retries: 60
+      delay: 60
+      until: result.stdout == "True"
+
+    - name: Wait for all cluster operators to be available
+      shell: |
+        oc get co -o json | jq -r '.items[] | select(.status.conditions[] | select(.type=="Available").status != "True") | .metadata.name' --kubeconfig ../../deployment/auth/kubeconfig
+      register: co_check
+      retries: 60
+      delay: 60
+      until: co_check.stdout_lines | length == 0
 
     - name: Backup install log files from deployment to backup
       copy:
@@ -517,20 +551,14 @@ cat > "$ROOT_DIR/ansible/playbooks/06_check_node_ready.yaml" <<'EOF'
     - name: Show oc login command
       shell: |
           oc login -u kubeadmin -p $(cat ../../deployment/auth/kubeadmin-password) \
-            https://api.sno-cluster.local:6443 --insecure-skip-tls-verify
-
-    - name: Check nodes readiness
-      shell: oc get nodes --kubeconfig ../../deployment/auth/kubeconfig  --no-headers | grep -v Ready || true
-      register: result
-      retries: 60
-      delay: 30
-      until: result.stdout_lines | length == 0
-      failed_when: false
+            https://api.sno-cluster.local:6443 --insecure-skip-tls-verify --kubeconfig ../../deployment/auth/kubeconfig
+  post_tasks:
+    - import_tasks: ../common/timer_end.yaml
 EOF
 
 cat > "$ROOT_DIR/ansible/playbooks/site.yaml" <<EOF
 ---
-- import_playbook: 01_generate_timestamp.yml
+- import_playbook: 01_generate_timestamp.yaml
 - import_playbook: 02_configure_tmux_and_env.yaml
 - import_playbook: 03_create_agent_iso.yaml
 - import_playbook: 04_configure_hypervisor_access.yaml
@@ -542,12 +570,10 @@ echo "All directories and files with content have been created successfully."
 echo ""
 tree -a $ROOT_DIR
 echo ""
-#echo "Run: ansible-playbook -v -i openshift-sno-automation/ansible/inventory.yaml openshift-sno-automation/ansible/playbooks/site.yaml"
 echo "Run: ansible-playbook -i openshift-sno-automation/ansible/inventory.yaml openshift-sno-automation/ansible/playbooks/site.yaml"
 read -p "Do you want to run this command? (y/N): " answer
 
 if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
-  #ansible-playbook -vvvvv -i openshift-sno-automation/ansible/inventory.yaml openshift-sno-automation/ansible/playbooks/site.yaml
   ansible-playbook -i openshift-sno-automation/ansible/inventory.yaml openshift-sno-automation/ansible/playbooks/site.yaml
 else
   echo "Canceled."

@@ -522,9 +522,21 @@ cat > "$ROOT_DIR/ansible/playbooks/06_check_node_ready.yaml" <<'EOF'
       set_fact:
         backup_path: "../../deployment/previous-run/{{ backup_time }}"
 
-    - name: Pause for 3300 seconds
-      pause:
-        seconds: 3300
+    - name: Wait until cluster version becomes Available=True
+      shell: |
+        oc get clusterversion version -o jsonpath="{.status.conditions[?(@.type=='Available')].status}" --kubeconfig ../../deployment/auth/kubeconfig
+      register: result
+      retries: 60
+      delay: 60
+      until: result.stdout == "True"
+
+    - name: Wait for all cluster operators to be available
+      shell: |
+        oc get co -o json --kubeconfig ../../deployment/auth/kubeconfig | jq -r '.items[] | select(.status.conditions[] | select(.type=="Available").status != "True") | .metadata.name' 
+      register: co_check
+      retries: 60
+      delay: 60
+      until: co_check.stdout_lines | length == 0
 
     - name: Backup install log files from deployment to backup
       copy:
@@ -539,15 +551,7 @@ cat > "$ROOT_DIR/ansible/playbooks/06_check_node_ready.yaml" <<'EOF'
     - name: Show oc login command
       shell: |
           oc login -u kubeadmin -p $(cat ../../deployment/auth/kubeadmin-password) \
-            https://api.sno-cluster.local:6443 --insecure-skip-tls-verify
-
-    - name: Check nodes readiness
-      shell: oc get nodes --kubeconfig ../../deployment/auth/kubeconfig  --no-headers | grep -v Ready || true
-      register: result
-      retries: 60
-      delay: 30
-      until: result.stdout_lines | length == 0
-      failed_when: false
+            https://api.sno-cluster.local:6443 --insecure-skip-tls-verify --kubeconfig ../../deployment/auth/kubeconfig
   post_tasks:
     - import_tasks: ../common/timer_end.yaml
 EOF
