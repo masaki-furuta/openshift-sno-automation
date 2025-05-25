@@ -181,28 +181,58 @@ spec:
 EOF
 
 # common/timer_start.yml
----
 cat > "$ROOT_DIR/ansible/common/timer_start.yml" <<EOF
-- name: Record start time for "{{ play_description | default(playbook_dir) }}"
+---
+- name: "Record start time for {{ play_description | default(playbook_dir) }}"
   set_fact:
-    this_start: "{{ lookup('pipe','date +%s') }}"
+    this_start: "{{ lookup('pipe','date +%s') | int }}"
+  run_once: true
+
+- name: "Display start time in Asia/Tokyo"
+  debug:
+    msg: >-
+      {{
+        lookup(
+          'pipe',
+          "TZ=Asia/Tokyo date -d @"
+          ~ this_start|string
+          ~ " '+%Y-%m-%d %H:%M:%S %Z'"
+        )
+      }}
   run_once: true
 EOF
 
 # common/timer_end.yml
 cat > "$ROOT_DIR/ansible/common/timer_end.yml" <<EOF
 ---
-- name: Record end time for "{{ play_description | default(playbook_dir) }}"
+- name: "Record end time for {{ play_description | default(playbook_dir) }}"
   set_fact:
-    this_end: "{{ lookup('pipe','date +%s') }}"
+    this_end: "{{ lookup('pipe','date +%s') | int }}"
   run_once: true
 
-- name: Display elapsed time for "{{ play_description | default(playbook_dir) }}"
+- name: "Display end time in Asia/Tokyo"
   debug:
-    msg:
-      - "Start: {{ this_start }}"
-      - "End:   {{ this_end }}"
-      - "Elapsed: {{ (this_end | int - this_start | int) }} seconds"
+    msg: >-
+      {{
+        lookup(
+          'pipe',
+          "TZ=Asia/Tokyo date -d @"
+          ~ this_end|string
+          ~ " '+%Y-%m-%d %H:%M:%S %Z'"
+        )
+      }}
+  run_once: true
+
+- name: "Display elapsed time"
+  debug:
+    msg: >-
+      Elapsed: {{
+        ((this_end | int) - (this_start | int)) // 3600
+      }}h {{
+        (((this_end | int) - (this_start | int)) % 3600) // 60
+      }}m {{
+        ((this_end | int) - (this_start | int)) % 60
+      }}s
   run_once: true
 EOF
 
@@ -212,12 +242,18 @@ cat > "$ROOT_DIR/ansible/playbooks/01_generate_timestamp.yml" <<EOF
 - name: Generate timestamp variable and save to file
   hosts: localhost
   gather_facts: false
+  vars:
+    play_description: "(01_generate_timestamp.yml)"
+  pre_tasks:
+    - import_tasks: ../common/timer_start.yml
   tasks:
     - name: Generate timestamp and save to vars file
       copy:
         dest: "../vars/timestamp.yml"
         content: |
           backup_time: "{{ lookup('pipe', 'date +%Y-%m-%d_%H-%M') }}"
+  post_tasks:
+    - import_tasks: ../common/timer_end.yml
 EOF
 
 # 02_configure_tmux_and_env.yaml
@@ -228,6 +264,10 @@ cat > "$ROOT_DIR/ansible/playbooks/02_configure_tmux_and_env.yaml" <<EOF
 - name: Configure tmux and bash environment
   hosts: localhost
   become: true
+  vars:
+    play_description: "(02_configure_tmux_and_env.yaml)"
+  pre_tasks:
+    - import_tasks: ../common/timer_start.yml
   tasks:
     - name: Check if tmux default command is already in ~/.tmux.conf
       stat:
@@ -284,6 +324,8 @@ cat > "$ROOT_DIR/ansible/playbooks/02_configure_tmux_and_env.yaml" <<EOF
     - name: End Playbook and prompt re-login
       meta: end_play
       when: tmux_conf_file.stat.exists == false or bashrc_file.stat.exists == false
+  post_tasks:
+    - import_tasks: ../common/timer_end.yml
 EOF
 
 # 03_create_agent_iso.yaml
@@ -500,11 +542,13 @@ echo "All directories and files with content have been created successfully."
 echo ""
 tree -a $ROOT_DIR
 echo ""
-echo "Run: ansible-playbook -v -i openshift-sno-automation/ansible/inventory.yaml openshift-sno-automation/ansible/playbooks/site.yaml"
+#echo "Run: ansible-playbook -v -i openshift-sno-automation/ansible/inventory.yaml openshift-sno-automation/ansible/playbooks/site.yaml"
+echo "Run: ansible-playbook -i openshift-sno-automation/ansible/inventory.yaml openshift-sno-automation/ansible/playbooks/site.yaml"
 read -p "Do you want to run this command? (y/N): " answer
 
 if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
-  ansible-playbook -v -i openshift-sno-automation/ansible/inventory.yaml openshift-sno-automation/ansible/playbooks/site.yaml
+  #ansible-playbook -vvvvv -i openshift-sno-automation/ansible/inventory.yaml openshift-sno-automation/ansible/playbooks/site.yaml
+  ansible-playbook -i openshift-sno-automation/ansible/inventory.yaml openshift-sno-automation/ansible/playbooks/site.yaml
 else
   echo "Canceled."
 fi
