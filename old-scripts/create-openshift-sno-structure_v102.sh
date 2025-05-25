@@ -4,13 +4,14 @@ set -euo pipefail
 
 ROOT_DIR="openshift-sno-automation"
 DIRS=(
-  "$ROOT_DIR/ansible/playbooks"
   "$ROOT_DIR/ansible/group_vars"
+  "$ROOT_DIR/ansible/playbooks"
   "$ROOT_DIR/ansible/vars"
   "$ROOT_DIR/deployment/openshift"
   "$ROOT_DIR/deployment/previous-run"
+  "$ROOT_DIR/common"
+  "$ROOT_DIR/old-scripts"
   "$ROOT_DIR/secrets"
-  "$ROOT_DIR/contrib"
 )
 
 echo "Creating directories..."
@@ -48,11 +49,18 @@ SNO_MAC_ADDR=$(grep -E '^ *mac_addr:' "$ROOT_DIR/ansible/inventory.yaml"|cut -d:
 SNO_DNS=$(grep      -E '^ *dns:'      "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
 SNO_GATEWAY=$(grep  -E '^ *gateway:'  "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
 
-cp pull-secret.txt id_rsa.pub "$ROOT_DIR/secrets/"
+cp secrets/{id_rsa.pub,pull-secret.txt} "$ROOT_DIR/secrets/"
 PULL_SECRET_CONTENT=$(cat "$ROOT_DIR/secrets/pull-secret.txt")
 SSH_KEY_CONTENT=$(cat "$ROOT_DIR/secrets/id_rsa.pub")
 
-cp install-openshift-bin_v3.sh  install-virtualbox-vnc.sh  oc-login_v4.sh  select-failed-pods-to-delete.sh  tp-fan-control.sh "$ROOT_DIR/contrib/"
+SCRIPTS=(
+  install-openshift-bin.sh
+  install-virtualbox-vnc.sh
+  oc-login.sh
+  select-failed-pods-to-delete.sh
+  tp-fan-control.sh
+  set-max-cpu-speed.sh
+)
 
 echo "Delete $ROOT_DIR/deployment/* and dotfiles? (y/N)"
 read -r ans
@@ -92,6 +100,9 @@ kind: AgentConfig
 metadata:
   name: sno-cluster
 rendezvousIP: $SNO_IP
+additionalNTPSources:
+  - 0.rhel.pool.ntp.org
+  - 1.rhel.pool.ntp.org
 hosts:
   - hostname: sno1
     role: master
@@ -157,16 +168,40 @@ spec:
       version: 3.2.0
     systemd:
       units:
-      - name: core-password.service
-        enabled: true
-        contents: |
-          [Unit]
-          Description=Changes core password
-          [Service]
-          Type=oneshot
-          ExecStart=/bin/bash -c "echo core:redhat | chpasswd"
-          [Install]
-          WantedBy=multi-user.target
+        - name: core-password.service
+          enabled: true
+          contents: |
+            [Unit]
+            Description=Changes core password
+            [Service]
+            Type=oneshot
+            ExecStart=/bin/bash -c "echo core:redhat | chpasswd"
+            [Install]
+            WantedBy=multi-user.target
+EOF
+
+# common/timer_start.yml
+cat > "$ROOT_DIR/common/timer_start.yml" <<EOF
+- name: Record start time for "{{ play_description | default(playbook_dir) }}"
+  set_fact:
+    this_start: "{{ lookup('pipe','date +%s') }}"
+  run_once: true
+EOF
+
+# common/timer_end.yml
+cat > "$ROOT_DIR/common/timer_end.yml" <<EOF
+- name: Record end time for "{{ play_description | default(playbook_dir) }}"
+  set_fact:
+    this_end: "{{ lookup('pipe','date +%s') }}"
+  run_once: true
+
+- name: Display elapsed time for "{{ play_description | default(playbook_dir) }}"
+  debug:
+    msg:
+      - "Start: {{ this_start }}"
+      - "End:   {{ this_end }}"
+      - "Elapsed: {{ (this_end | int - this_start | int) }} seconds"
+  run_once: true
 EOF
 
 # 01_generate_timestamp.yml
@@ -243,7 +278,6 @@ cat > "$ROOT_DIR/ansible/playbooks/02_configure_tmux_and_env.yaml" <<EOF
           fi
         create: true
       when: bashrc_file.stat.exists == false or "'if command -v tmux' not in lookup('file', ansible_env.HOME + '/.bashrc')"
-      #when: bashrc_file.stat.exists == false or "'if command -v tmux &>/dev/null && [ -z \"$TMUX\" ]; then' not in lookup('file', ansible_env.HOME + '/.bashrc')"
 
     - name: End Playbook and prompt re-login
       meta: end_play
@@ -261,7 +295,7 @@ cat > "$ROOT_DIR/ansible/playbooks/03_create_agent_iso.yaml" <<EOF
   tasks:
     - name: Load shared timestamp
       include_vars: "../vars/timestamp.yml"
-  
+
     - name: Set backup_path
       set_fact:
         backup_path: "../../deployment/previous-run/{{ backup_time }}"
@@ -313,11 +347,11 @@ cat > "$ROOT_DIR/ansible/playbooks/03_create_agent_iso.yaml" <<EOF
       poll: 0
 EOF
 
-# 04_prepare_hypervisor_dns.yaml
-cat > "$ROOT_DIR/ansible/playbooks/04_prepare_hypervisor_dns.yaml" <<EOF
+# 04_configure_hypervisor_access.yaml
+cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
 ---
-# Prepare DNS and SSH settings on hypervisor
-- name: Configure SSH settings for root
+# Configure SSH and DNS settings on the hypervisor
+- name: Configure hypervisor access
   hosts: localhost
   become: true
   gather_facts: false
@@ -327,40 +361,31 @@ cat > "$ROOT_DIR/ansible/playbooks/04_prepare_hypervisor_dns.yaml" <<EOF
         dest: /root/.ssh/config
         content: |
           Host sno1
-              Hostname              192.168.1.100
+              Hostname              $SNO_IP
               User                  core
 
           Host *
               StrictHostKeyChecking no
               UserKnownHostsFile    /dev/null
               LogLevel              QUIET
+              CanonicalizeHostname yes
+              CanonicalDomains local
+              CanonicalizeFallbackLocal yes
         owner: root
         group: root
         mode: '0644'
 
-- name: Setup systemd-resolved for sno-cluster
-  hosts: localhost
-  become: true
-  gather_facts: false
-  tasks:
-    - name: Create resolved.conf.d directory
-      file:
-        path: /etc/systemd/resolved.conf.d
-        state: directory
-
-    - name: Configure DNS
-      copy:
-        dest: /etc/systemd/resolved.conf.d/sno-cluster.conf
-        content: |
-          [Resolve]
-          DNS={{ hostvars['sno1'].ip }} 1.1.1.1
-          Domains=sno-cluster.local apps.sno-cluster.local
-
-    - name: Restart systemd-resolved
-      systemd:
-        name: systemd-resolved
-        state: restarted
-        enabled: true
+    - name: Add SNO DNS entries to /etc/hosts
+      lineinfile:
+        path: /etc/hosts
+        line: "{{ item }}"
+        state: present
+      loop:
+        - "$SNO_IP sno1.sno-cluster.local"
+        - "$SNO_IP api.sno-cluster.local"
+        - "$SNO_IP api-int.sno-cluster.local"
+        - "$SNO_IP oauth-openshift.apps.sno-cluster.local"
+        - "$SNO_IP console-openshift-console.apps.sno-cluster.local"
 EOF
 
 # 05_create_virtualbox_vm.yaml
@@ -430,10 +455,10 @@ cat > "$ROOT_DIR/ansible/playbooks/06_check_node_ready.yaml" <<'EOF'
     - name: Set backup_path
       set_fact:
         backup_path: "../../deployment/previous-run/{{ backup_time }}"
-  
-    - name: Pause for 3600 seconds
+
+    - name: Pause for 3000 seconds
       pause:
-        seconds: 3600
+        seconds: 3000
 
     - name: Backup install log files from deployment to backup
       copy:
@@ -464,7 +489,7 @@ cat > "$ROOT_DIR/ansible/playbooks/site.yaml" <<EOF
 - import_playbook: 01_generate_timestamp.yml
 - import_playbook: 02_configure_tmux_and_env.yaml
 - import_playbook: 03_create_agent_iso.yaml
-- import_playbook: 04_prepare_hypervisor_dns.yaml
+- import_playbook: 04_configure_hypervisor_access.yaml
 - import_playbook: 05_create_virtualbox_vm.yaml
 - import_playbook: 06_check_node_ready.yaml
 EOF
