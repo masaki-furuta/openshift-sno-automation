@@ -4,12 +4,12 @@ set -euo pipefail
 
 ROOT_DIR="openshift-sno-automation"
 DIRS=(
+  "$ROOT_DIR/ansible/common"
   "$ROOT_DIR/ansible/group_vars"
   "$ROOT_DIR/ansible/playbooks"
   "$ROOT_DIR/ansible/vars"
   "$ROOT_DIR/deployment/openshift"
   "$ROOT_DIR/deployment/previous-run"
-  "$ROOT_DIR/common"
   "$ROOT_DIR/old-scripts"
   "$ROOT_DIR/secrets"
 )
@@ -181,7 +181,8 @@ spec:
 EOF
 
 # common/timer_start.yml
-cat > "$ROOT_DIR/common/timer_start.yml" <<EOF
+---
+cat > "$ROOT_DIR/ansible/common/timer_start.yml" <<EOF
 - name: Record start time for "{{ play_description | default(playbook_dir) }}"
   set_fact:
     this_start: "{{ lookup('pipe','date +%s') }}"
@@ -189,7 +190,8 @@ cat > "$ROOT_DIR/common/timer_start.yml" <<EOF
 EOF
 
 # common/timer_end.yml
-cat > "$ROOT_DIR/common/timer_end.yml" <<EOF
+cat > "$ROOT_DIR/ansible/common/timer_end.yml" <<EOF
+---
 - name: Record end time for "{{ play_description | default(playbook_dir) }}"
   set_fact:
     this_end: "{{ lookup('pipe','date +%s') }}"
@@ -456,9 +458,9 @@ cat > "$ROOT_DIR/ansible/playbooks/06_check_node_ready.yaml" <<'EOF'
       set_fact:
         backup_path: "../../deployment/previous-run/{{ backup_time }}"
 
-    - name: Pause for 3000 seconds
+    - name: Pause for 3300 seconds
       pause:
-        seconds: 3000
+        seconds: 3300
 
     - name: Backup install log files from deployment to backup
       copy:

@@ -1,5 +1,0 @@
----
-- name: Record start time for "{{ play_description | default(playbook_dir) }}"
-  set_fact:
-    this_start: "{{ lookup('pipe','date +%s') }}"
-  run_once: true
