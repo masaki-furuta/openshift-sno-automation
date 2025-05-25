@@ -1,0 +1,13 @@
+---
+- name: Record end time for "{{ play_description | default(playbook_dir) }}"
+  set_fact:
+    this_end: "{{ lookup('pipe','date +%s') }}"
+  run_once: true
+
+- name: Display elapsed time for "{{ play_description | default(playbook_dir) }}"
+  debug:
+    msg:
+      - "Start: {{ this_start }}"
+      - "End:   {{ this_end }}"
+      - "Elapsed: {{ (this_end | int - this_start | int) }} seconds"
+  run_once: true

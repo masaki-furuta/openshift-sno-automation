@@ -9,8 +9,7 @@ DIRS=(
   "$ROOT_DIR/ansible/vars"
   "$ROOT_DIR/deployment/openshift"
   "$ROOT_DIR/deployment/previous-run"
-  "$ROOT_DIR/contrib"
-  "$ROOT_DIR/devel"
+  "$ROOT_DIR/common"
   "$ROOT_DIR/old-scripts"
   "$ROOT_DIR/secrets"
 )
@@ -62,14 +61,6 @@ SCRIPTS=(
   tp-fan-control.sh
   set-max-cpu-speed.sh
 )
-
-echo "Copying contrib scripts..."
-for script in "${SCRIPTS[@]}"; do
-  cp "contrib/${script}" "$ROOT_DIR/contrib/"
-done
-
-echo "Copying devel scripts..."
-cp devel/new-version.sh "$ROOT_DIR/devel/"
 
 echo "Delete $ROOT_DIR/deployment/* and dotfiles? (y/N)"
 read -r ans
@@ -177,16 +168,40 @@ spec:
       version: 3.2.0
     systemd:
       units:
-      - name: core-password.service
-        enabled: true
-        contents: |
-          [Unit]
-          Description=Changes core password
-          [Service]
-          Type=oneshot
-          ExecStart=/bin/bash -c "echo core:redhat | chpasswd"
-          [Install]
-          WantedBy=multi-user.target
+        - name: core-password.service
+          enabled: true
+          contents: |
+            [Unit]
+            Description=Changes core password
+            [Service]
+            Type=oneshot
+            ExecStart=/bin/bash -c "echo core:redhat | chpasswd"
+            [Install]
+            WantedBy=multi-user.target
+EOF
+
+# common/timer_start.yml
+cat > "$ROOT_DIR/common/timer_start.yml" <<EOF
+- name: Record start time for "{{ play_description | default(playbook_dir) }}"
+  set_fact:
+    this_start: "{{ lookup('pipe','date +%s') }}"
+  run_once: true
+EOF
+
+# common/timer_end.yml
+cat > "$ROOT_DIR/common/timer_end.yml" <<EOF
+- name: Record end time for "{{ play_description | default(playbook_dir) }}"
+  set_fact:
+    this_end: "{{ lookup('pipe','date +%s') }}"
+  run_once: true
+
+- name: Display elapsed time for "{{ play_description | default(playbook_dir) }}"
+  debug:
+    msg:
+      - "Start: {{ this_start }}"
+      - "End:   {{ this_end }}"
+      - "Elapsed: {{ (this_end | int - this_start | int) }} seconds"
+  run_once: true
 EOF
 
 # 01_generate_timestamp.yml
@@ -263,7 +278,6 @@ cat > "$ROOT_DIR/ansible/playbooks/02_configure_tmux_and_env.yaml" <<EOF
           fi
         create: true
       when: bashrc_file.stat.exists == false or "'if command -v tmux' not in lookup('file', ansible_env.HOME + '/.bashrc')"
-      #when: bashrc_file.stat.exists == false or "'if command -v tmux &>/dev/null && [ -z \"$TMUX\" ]; then' not in lookup('file', ansible_env.HOME + '/.bashrc')"
 
     - name: End Playbook and prompt re-login
       meta: end_play
@@ -281,7 +295,7 @@ cat > "$ROOT_DIR/ansible/playbooks/03_create_agent_iso.yaml" <<EOF
   tasks:
     - name: Load shared timestamp
       include_vars: "../vars/timestamp.yml"
-  
+
     - name: Set backup_path
       set_fact:
         backup_path: "../../deployment/previous-run/{{ backup_time }}"
@@ -336,8 +350,8 @@ EOF
 # 04_configure_hypervisor_access.yaml
 cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
 ---
-# Prepare DNS and SSH settings on hypervisor
-- name: Configure SSH settings for root
+# Configure SSH and DNS settings on the hypervisor
+- name: Configure hypervisor access
   hosts: localhost
   become: true
   gather_facts: false
@@ -347,7 +361,7 @@ cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
         dest: /root/.ssh/config
         content: |
           Host sno1
-              Hostname              192.168.1.100
+              Hostname              $SNO_IP
               User                  core
 
           Host *
@@ -361,22 +375,17 @@ cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
         group: root
         mode: '0644'
 
-- name: Add /etc/hosts entries for sno-cluster
-  hosts: localhost
-  become: true
-  gather_facts: false
-  tasks:
     - name: Add SNO DNS entries to /etc/hosts
       lineinfile:
         path: /etc/hosts
         line: "{{ item }}"
         state: present
       loop:
-        - "192.168.1.100 sno1.sno-cluster.local"
-        - "192.168.1.100 api.sno-cluster.local"
-        - "192.168.1.100 api-int.sno-cluster.local"
-        - "192.168.1.100 oauth-openshift.apps.sno-cluster.local"
-        - "192.168.1.100 console-openshift-console.apps.sno-cluster.local"
+        - "$SNO_IP sno1.sno-cluster.local"
+        - "$SNO_IP api.sno-cluster.local"
+        - "$SNO_IP api-int.sno-cluster.local"
+        - "$SNO_IP oauth-openshift.apps.sno-cluster.local"
+        - "$SNO_IP console-openshift-console.apps.sno-cluster.local"
 EOF
 
 # 05_create_virtualbox_vm.yaml
@@ -446,10 +455,10 @@ cat > "$ROOT_DIR/ansible/playbooks/06_check_node_ready.yaml" <<'EOF'
     - name: Set backup_path
       set_fact:
         backup_path: "../../deployment/previous-run/{{ backup_time }}"
-  
-    - name: Pause for 3000 seconds
+
+    - name: Pause for 3300 seconds
       pause:
-        seconds: 3000
+        seconds: 3300
 
     - name: Backup install log files from deployment to backup
       copy:
