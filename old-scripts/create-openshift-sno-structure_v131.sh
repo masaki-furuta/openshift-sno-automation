@@ -147,8 +147,6 @@ spec:
     ignition:
       version: 3.2.0
     kernelArguments:
-      - console=tty0
-      - console=ttyS0
       - processor.max_cstate=0
       - intel_idle.max_cstate=0
 EOF
@@ -403,7 +401,7 @@ cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
 - name: Configure hypervisor access
   hosts: localhost
   become: true
-  gather_facts: true
+  gather_facts: false
   vars:
     play_description: "(04_configure_hypervisor_access.yaml)"
   pre_tasks:
@@ -440,7 +438,7 @@ cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
         content: |
           [Resolve]
           DNS=127.0.0.1
-          Domains=~apps.sno-cluster.local
+          Domains=~apps.sno-cluster.local ~sno-cluster.local 
         mode: '0644'
 
     - name: Ensure dnsmasq.d directory exists
