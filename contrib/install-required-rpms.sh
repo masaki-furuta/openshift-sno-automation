@@ -6,6 +6,11 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+# RPMFusionの有効化
+echo "Enabling RPMFusion repositories..."
+sudo dnf install -y https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
+sudo dnf install -y https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+
 # 🔧 インストールしたいパッケージリスト
 PACKAGES=(
   ansible-collection-ansible-posix

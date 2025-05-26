@@ -8,6 +8,8 @@ fi
 
 # 🔧 インストールしたいパッケージリスト
 PACKAGES=(
+  ansible-collection-ansible-posix
+  ansible-playbook
   atop
   avahi
   avahi-tools
@@ -23,7 +25,7 @@ PACKAGES=(
   golang
   hexedit
   htop
-  icdiff
+  https://raw.githubusercontent.com/rpmsphere/noarch/master/i/icdiff-2.0.7-1.noarch.rpm
   intel-undervolt
   inxi
   jq
@@ -54,4 +56,13 @@ PACKAGES=(
 
 echo "📦 Installing packages: ${PACKAGES[*]}"
 dnf install -y "${PACKAGES[@]}"
+echo ""
+
+echo "📦 Stop firewalld"
+systemctl disable firewalld --now
+
+echo "📦 Extend LVM"
+lvextend -l +100%FREE /dev/fedora/root
+xfs_growfs /
+df -h
 
