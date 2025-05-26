@@ -12,10 +12,10 @@ No `.j2` templating is used. Everything is generated dynamically using Bash scri
 ```
 openshift-sno-automation/
 ├── 📂 ansible/                     # 📜 Ansible playbooks to drive installation
-│   ├── 📂 common/                 # ⏱️ Shared tasks (e.g., start/end timer)
-│   ├── 📂 playbooks/             # ▶️ Step-by-step Ansible workflows
-│   ├── 📂 vars/                  # 📌 Runtime variables (e.g., timestamps)
-│   └── 🧾 inventory.yaml         # 🧭 Inventory for local + sno1 node
+│   ├── 📂 common/                  # ⏱️ Shared tasks (e.g., start/end timer)
+│   ├── 📂 playbooks/               # ▶️ Step-by-step Ansible workflows
+│   ├── 📂 vars/                    # 📌 Runtime variables (e.g., timestamps)
+│   └── 🧾 inventory.yaml           # 🧭 Inventory for local + sno1 node
 │
 ├── 📂 contrib/                     # 🛠️ Helper scripts (VirtualBox, CLI tools, kickstart)
 │
