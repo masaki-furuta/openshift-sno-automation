@@ -44,6 +44,7 @@ EOF
 
 SNO_CIDR=$(grep     -E '^ *cidr:'     "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
 SNO_IP=$(grep       -E '^ *ip:'       "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
+REV_IP=$(echo "$SNO_IP" | awk -F. '{print $4"."$3"."$2"."$1}')
 SNO_MAC_ADDR=$(grep -E '^ *mac_addr:' "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
 SNO_DNS=$(grep      -E '^ *dns:'      "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
 SNO_GATEWAY=$(grep  -E '^ *gateway:'  "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
@@ -72,7 +73,7 @@ fi
 cat > "$ROOT_DIR/deployment/install-config.yaml" <<EOF
 ---
 apiVersion: v1
-baseDomain: local
+baseDomain: test
 compute:
   - name: worker
     replicas: 0
@@ -395,6 +396,7 @@ cat > "$ROOT_DIR/ansible/playbooks/03_create_agent_iso.yaml" <<EOF
 EOF
 
 # 04_configure_hypervisor_access.yaml
+REV_ID="${REV_ID:-}"
 cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
 ---
 # Configure SSH and DNS settings on the hypervisor
@@ -432,13 +434,13 @@ cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
         state: directory
         mode: '0755'
 
-    - name: Configure systemd-resolved to forward .apps.sno-cluster.local to 127.0.0.1
+    - name: Configure systemd-resolved to forward .apps.sno-cluster.test to 127.0.0.1
       copy:
         dest: /etc/systemd/resolved.conf.d/dnsmasq-openshift.conf
         content: |
           [Resolve]
           DNS=127.0.0.1
-          Domains=~apps.sno-cluster.local ~sno-cluster.local 
+          Domains=~apps.sno-cluster.test ~sno-cluster.test
         mode: '0644'
 
     - name: Ensure dnsmasq.d directory exists
@@ -447,24 +449,28 @@ cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
         state: directory
         mode: '0755'
 
-    - name: Add dnsmasq rule for .apps.sno-cluster.local and related entries
+    - name: Add dnsmasq rule for .apps.sno-cluster.test and related entries
       copy:
         dest: /etc/dnsmasq.d/openshift.conf
         content: |
-          address=/.apps.sno-cluster.local/$SNO_IP
-          address=/sno-cluster.local/$SNO_IP
+          address=/.apps.sno-cluster.test/$SNO_IP
+          address=/sno-cluster.test/$SNO_IP
+          ptr-record=$REV_ID.in-addr.arpa,sno1.sno-cluster.test
+          ptr-record=$REV_ID.in-addr.arpa,api.apps.sno-cluster.test
+          no-resolv
         mode: '0644'
 
-    - name: Ensure dnsmasq is enabled and started
+    - name: Enable and restart dnsmasq
       systemd:
         name: dnsmasq
         enabled: yes
-        state: started
+        state: restarted
 
     - name: Restart systemd-resolved to apply domain forwarding
       systemd:
         name: systemd-resolved
         state: restarted
+
   post_tasks:
     - import_tasks: ../common/timer_end.yaml
 EOF
@@ -532,7 +538,7 @@ cat > "$ROOT_DIR/ansible/playbooks/05_create_virtualbox_vm.yaml" <<EOF
 
     - name: Set I/O priority for VBoxHeadless
       shell: |
-        for PID in \$(pgrep -f "VBoxHeadless.*{{ item }}");do 
+        for PID in \$(pgrep -f "VBoxHeadless.*{{ item }}");do
           ionice -c1 -n0 -p \$PID
         done
       loop: [sno2]
@@ -569,7 +575,7 @@ cat > "$ROOT_DIR/ansible/playbooks/06_check_node_ready.yaml" <<'EOF'
 
     - name: Wait for all cluster operators to be available
       shell: |
-        oc get co -o json --kubeconfig ../../deployment/auth/kubeconfig | jq -r '.items[] | select(.status.conditions[] | select(.type=="Available").status != "True") | .metadata.name' 
+        oc get co -o json --kubeconfig ../../deployment/auth/kubeconfig | jq -r '.items[] | select(.status.conditions[] | select(.type=="Available").status != "True") | .metadata.name'
       register: co_check
       retries: 60
       delay: 60
@@ -588,7 +594,7 @@ cat > "$ROOT_DIR/ansible/playbooks/06_check_node_ready.yaml" <<'EOF'
     - name: Show oc login command
       shell: |
           oc login -u kubeadmin -p $(cat ../../deployment/auth/kubeadmin-password) \
-            https://api.sno-cluster.local:6443 --insecure-skip-tls-verify --kubeconfig ../../deployment/auth/kubeconfig
+            https://api.sno-cluster.test:6443 --insecure-skip-tls-verify --kubeconfig ../../deployment/auth/kubeconfig
   post_tasks:
     - import_tasks: ../common/timer_end.yaml
 EOF
@@ -615,4 +621,3 @@ if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
 else
   echo "Canceled."
 fi
-
