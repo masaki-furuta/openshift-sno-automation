@@ -53,6 +53,13 @@ sudo ldconfig
 # インストール確認
 echo "Checking the installation and symbolic link..."
 VBoxManage list extpacks
+echo ""
+
+# vboxdrv kernel モジュールのインストール
+echo "Install vboxdrv kernel module..."
+KVER=$(uname -r)
+dnf install akmod-VirtualBox kernel-devel-$KVER
+akmods --kernels $KVER && systemctl restart vboxdrv.service
 
 # 完了メッセージ
 echo "Setup completed successfully!"

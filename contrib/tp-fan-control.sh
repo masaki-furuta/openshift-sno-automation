@@ -7,9 +7,25 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-if [ ! -w "$FAN_CTRL" ]; then
-  echo "Error: $FAN_CTRL に書き込めません。root で実行してください。"
-  exit 1
+CONF_FILE="/etc/modprobe.d/thinkpad_acpi.conf"
+MODULE="thinkpad_acpi"
+OPTION_LINE="options thinkpad_acpi fan_control=1"
+
+# 1. 設定ファイルにオプションが存在するか確認
+if ! grep -Fxq "$OPTION_LINE" "$CONF_FILE" 2>/dev/null; then
+  echo "✅ Adding fan control option to $CONF_FILE"
+  echo "$OPTION_LINE" | sudo tee -a "$CONF_FILE"
+else
+  echo "✅ Fan control option already set in $CONF_FILE"
+fi
+
+# 2. カーネルモジュールがロード済みか確認してリロード
+if lsmod | grep -q "^$MODULE"; then
+  echo "🔁 Reloading $MODULE with fan_control=1"
+  sudo modprobe -r $MODULE
+  sudo modprobe $MODULE fan_control=1
+else
+  echo "ℹ️ $MODULE not loaded yet. It will be loaded with correct option at next boot."
 fi
 
 echo "===== ThinkPad Fan Control ====="

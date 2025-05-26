@@ -5,7 +5,6 @@ set -euo pipefail
 ROOT_DIR="openshift-sno-automation"
 DIRS=(
   "$ROOT_DIR/ansible/common"
-  "$ROOT_DIR/ansible/group_vars"
   "$ROOT_DIR/ansible/playbooks"
   "$ROOT_DIR/ansible/vars"
   "$ROOT_DIR/deployment/openshift"
@@ -404,7 +403,7 @@ cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
 - name: Configure hypervisor access
   hosts: localhost
   become: true
-  gather_facts: false
+  gather_facts: true
   vars:
     play_description: "(04_configure_hypervisor_access.yaml)"
   pre_tasks:
@@ -429,17 +428,45 @@ cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
         group: root
         mode: '0644'
 
-    - name: Add SNO DNS entries to /etc/hosts
-      lineinfile:
-        path: /etc/hosts
-        line: "{{ item }}"
-        state: present
-      loop:
-        - "$SNO_IP sno1.sno-cluster.local"
-        - "$SNO_IP api.sno-cluster.local"
-        - "$SNO_IP api-int.sno-cluster.local"
-        - "$SNO_IP oauth-openshift.apps.sno-cluster.local"
-        - "$SNO_IP console-openshift-console.apps.sno-cluster.local"
+    - name: Ensure systemd-resolved override directory exists
+      file:
+        path: /etc/systemd/resolved.conf.d
+        state: directory
+        mode: '0755'
+
+    - name: Configure systemd-resolved to forward .apps.sno-cluster.local to 127.0.0.1
+      copy:
+        dest: /etc/systemd/resolved.conf.d/dnsmasq-openshift.conf
+        content: |
+          [Resolve]
+          DNS=127.0.0.1
+          Domains=~apps.sno-cluster.local ~sno-cluster.local 
+        mode: '0644'
+
+    - name: Ensure dnsmasq.d directory exists
+      file:
+        path: /etc/dnsmasq.d
+        state: directory
+        mode: '0755'
+
+    - name: Add dnsmasq rule for .apps.sno-cluster.local and related entries
+      copy:
+        dest: /etc/dnsmasq.d/openshift.conf
+        content: |
+          address=/.apps.sno-cluster.local/$SNO_IP
+          address=/sno-cluster.local/$SNO_IP
+        mode: '0644'
+
+    - name: Ensure dnsmasq is enabled and started
+      systemd:
+        name: dnsmasq
+        enabled: yes
+        state: started
+
+    - name: Restart systemd-resolved to apply domain forwarding
+      systemd:
+        name: systemd-resolved
+        state: restarted
   post_tasks:
     - import_tasks: ../common/timer_end.yaml
 EOF
