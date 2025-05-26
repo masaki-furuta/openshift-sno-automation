@@ -470,6 +470,7 @@ cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
 EOF
 
 # 05_create_virtualbox_vm.yaml
+PID="${PID:-}"
 cat > "$ROOT_DIR/ansible/playbooks/05_create_virtualbox_vm.yaml" <<EOF
 ---
 # Create VirtualBox VM with disk, ISO and boot setup
@@ -505,7 +506,7 @@ cat > "$ROOT_DIR/ansible/playbooks/05_create_virtualbox_vm.yaml" <<EOF
       loop:
         - sno1
 
-    - name: Create and configure VirtualBox VM
+    - name: Create and configure VirtualBox VM with SCHED_FIFO 99
       shell: |
         VBoxManage createvm --name "{{ item }}" --register
         VBoxManage modifyvm "{{ item }}" --memory 20480 --cpus 8 --ioapic on
@@ -521,9 +522,20 @@ cat > "$ROOT_DIR/ansible/playbooks/05_create_virtualbox_vm.yaml" <<EOF
 
     - name: Start VirtualBox VM
       shell: |
-        VBoxManage startvm "{{ item }}" --type headless
+        chrt -f 99 VBoxManage startvm "{{ item }}" --type headless
       loop:
         - sno1
+    - name: Wait for VBoxHeadless process
+      shell: |
+        timeout 10 bash -c 'until pgrep -f "VBoxHeadless.*{{ item }}"; do sleep 1; done'
+      loop: [sno1]
+
+    - name: Set I/O priority for VBoxHeadless
+      shell: |
+        for PID in \$(pgrep -f "VBoxHeadless.*{{ item }}");do 
+          ionice -c1 -n0 -p \$PID
+        done
+      loop: [sno2]
   post_tasks:
     - import_tasks: ../common/timer_end.yaml
 EOF
