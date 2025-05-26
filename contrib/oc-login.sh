@@ -39,7 +39,7 @@ if [[ "$MODE" == "auto" ]]; then
 
     export KUBECONFIG="$KUBECONFIG_PATH"
     API_URL=$(grep -Eom1 'https://api\.[^ ]+' "$KUBECONFIG_PATH")
-    API_URL=${API_URL:-"https://api.sno-cluster.local:6443"}
+    API_URL=${API_URL:-"https://api.sno-cluster.test:6443"}
 
     echo "👉 試行中: $KUBECONFIG_PATH"
     oc login -u kubeadmin -p "$PASSWORD" "$API_URL" --insecure-skip-tls-verify
@@ -86,7 +86,7 @@ fi
 
 export KUBECONFIG="$KUBECONFIG_PATH"
 API_URL=$(grep -Eom1 'https://api\.[^ ]+' "$KUBECONFIG_PATH")
-API_URL=${API_URL:-"https://api.sno-cluster.local:6443"}
+API_URL=${API_URL:-"https://api.sno-cluster.test:6443"}
 
 echo "👉 oc login を実行中..."
 oc login -u kubeadmin -p "$PASSWORD" "$API_URL" --insecure-skip-tls-verify

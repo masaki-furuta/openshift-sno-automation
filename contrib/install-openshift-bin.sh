@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # インストール先ディレクトリ
-BIN_DIR="${HOME}/.local/bin"
+BIN_DIR="${HOME}/.test/bin"
 mkdir -p "$BIN_DIR"
 
 echo
@@ -66,5 +66,5 @@ echo
 # 補足:
 # 各コマンドは --version でも外部に接続することがあるため、出力を抑制しています（2>/dev/null）。
 # bin ディレクトリが PATH に通っていない場合は以下を追加してください:
-#   echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+#   echo 'export PATH="$HOME/.test/bin:$PATH"' >> ~/.bashrc
 #   source ~/.bashrc
