@@ -502,21 +502,21 @@ cat > "$ROOT_DIR/ansible/playbooks/05_create_virtualbox_vm.yaml" <<EOF
         fi
       loop: [sno1]
 
-    - name: Convert mac_addr to mac (no colons, lowercase)
-      set_fact:
-        mac: "{{ mac_addr | regex_replace(':', '') | lower }}"
-
     - name: Create disk image
       shell: |
         VBoxManage createmedium disk --filename "{{ hostvars['sno1'].raw_path }}" --size 153600 --format raw --variant Fixed
       loop: [sno1]
+
+    - name: Convert mac_addr from sno1 to mac on localhost (no colons, lowercase)
+      set_fact:
+        sno1_mac: "{{ hostvars['sno1'].mac_addr | regex_replace(':', '') | lower }}"
 
     - name: Create and configure VirtualBox VM with SCHED_FIFO 99
       shell: |
         VBoxManage createvm --name "{{ item }}" --register
         VBoxManage modifyvm "{{ item }}" --memory 20480 --cpus 8 --ioapic on
         VBoxManage modifyvm "{{ item }}" --nic1 bridged --bridgeadapter1 "{{ hostvars['localhost'].bridge_if }}" --nictype1 virtio
-        VBoxManage modifyvm "{{ item }}" --macaddress1 "{{ mac }}"
+        VBoxManage modifyvm "{{ item }}" --macaddress1 "{{ sno1_mac }}"
         VBoxManage modifyvm "{{ item }}" --vrde on --vrdeport 5900 --vrdeproperty VNCPassword=vnc
         VBoxManage storagectl "{{ item }}" --name "VirtIO Controller" --add virtio --controller VirtIO --hostiocache on
         VBoxManage storageattach "{{ item }}" --storagectl "VirtIO Controller" --port 0 --device 0 --type hdd --medium "{{ hostvars['sno1'].raw_path }}" --nonrotational on || true

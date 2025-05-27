@@ -386,7 +386,7 @@ cat > "$ROOT_DIR/ansible/playbooks/03_create_agent_iso.yaml" <<EOF
 
     - name: Launch OpenShift installer monitor via tmux
       shell: >
-        tmux split-window -h "sleep 20;openshift-install --dir /root/ocp/openshift-sno-automation/deployment agent wait-for install-complete --log-level=debug;read -p 'Finished.'" \; resize-pane -L 50 \; split-window -h "bash" \; resize-pane -R 10 \; select-pane -t 2
+        tmux split-window -h "sleep 20;openshift-install --dir ../../deployment agent wait-for install-complete --log-level=debug;read -p 'Finished.'" \; resize-pane -L 50 \; split-window -h "bash" \; resize-pane -R 10 \; select-pane -t 2
       async: 10
       poll: 0
   post_tasks:
