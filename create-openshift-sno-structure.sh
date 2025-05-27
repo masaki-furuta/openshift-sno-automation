@@ -27,14 +27,12 @@ all:
     localhost:
       ansible_connection: local
       ansible_user: root
-      ansible_ssh_private_key_file: ~/.ssh/id_rsa
       bridge_if: "wlp3s0"
     sno1:
       ansible_host: 192.168.1.100
       ansible_user: core
-      ip: 192.168.1.100
+      ansible_ssh_private_key_file: ~/.ssh/id_rsa
       cidr: 192.168.1.0/24
-      mac: "525400aabbcc"
       mac_addr: "52:54:00:aa:bb:cc"
       raw_path: "/root/VirtualBox VMs/sno1/sno1.raw"
       iso_path: "../../deployment/agent.x86_64.iso"
@@ -42,12 +40,12 @@ all:
       gateway: 192.168.1.1
 EOF
 
-SNO_CIDR=$(grep     -E '^ *cidr:'     "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
-SNO_IP=$(grep       -E '^ *ip:'       "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
+SNO_CIDR=$(grep     -E '^ *cidr:'         "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
+SNO_IP=$(grep       -E '^ *ansible_host:' "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
 REV_IP=$(echo "$SNO_IP" | awk -F. '{print $4"."$3"."$2"."$1}')
-SNO_MAC_ADDR=$(grep -E '^ *mac_addr:' "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
-SNO_DNS=$(grep      -E '^ *dns:'      "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
-SNO_GATEWAY=$(grep  -E '^ *gateway:'  "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
+SNO_MAC_ADDR=$(grep -E '^ *mac_addr:'     "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
+SNO_DNS=$(grep      -E '^ *dns:'          "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
+SNO_GATEWAY=$(grep  -E '^ *gateway:'      "$ROOT_DIR/ansible/inventory.yaml"|cut -d: -f2-|sed -e 's/ *//g')
 
 cp secrets/{id_rsa.pub,pull-secret.txt} "$ROOT_DIR/secrets/"
 PULL_SECRET_CONTENT=$(cat "$ROOT_DIR/secrets/pull-secret.txt")
@@ -494,8 +492,7 @@ cat > "$ROOT_DIR/ansible/playbooks/05_create_virtualbox_vm.yaml" <<EOF
           VBoxManage controlvm "{{ item }}" poweroff || true
           VBoxManage unregistervm "{{ item }}" --delete-all
         fi
-      loop:
-        - sno1
+      loop: [sno1]
 
     - name: Remove existing disk image
       shell: |
@@ -503,34 +500,35 @@ cat > "$ROOT_DIR/ansible/playbooks/05_create_virtualbox_vm.yaml" <<EOF
           echo "Deleting existing VDI: {{ hostvars['sno1'].raw_path }}"
           VBoxManage closemedium disk "{{ hostvars['sno1'].raw_path }}" --delete || true
         fi
-      loop:
-        - sno1
+      loop: [sno1]
 
     - name: Create disk image
       shell: |
         VBoxManage createmedium disk --filename "{{ hostvars['sno1'].raw_path }}" --size 153600 --format raw --variant Fixed
-      loop:
-        - sno1
+      loop: [sno1]
+
+    - name: Convert mac_addr from sno1 to mac on localhost (no colons, lowercase)
+      set_fact:
+        sno1_mac: "{{ hostvars['sno1'].mac_addr | regex_replace(':', '') | lower }}"
 
     - name: Create and configure VirtualBox VM with SCHED_FIFO 99
       shell: |
         VBoxManage createvm --name "{{ item }}" --register
         VBoxManage modifyvm "{{ item }}" --memory 20480 --cpus 8 --ioapic on
         VBoxManage modifyvm "{{ item }}" --nic1 bridged --bridgeadapter1 "{{ hostvars['localhost'].bridge_if }}" --nictype1 virtio
-        VBoxManage modifyvm "{{ item }}" --macaddress1 "{{ hostvars['sno1'].mac }}"
+        VBoxManage modifyvm "{{ item }}" --macaddress1 "{{ sno1_mac }}"
         VBoxManage modifyvm "{{ item }}" --vrde on --vrdeport 5900 --vrdeproperty VNCPassword=vnc
         VBoxManage storagectl "{{ item }}" --name "VirtIO Controller" --add virtio --controller VirtIO --hostiocache on
         VBoxManage storageattach "{{ item }}" --storagectl "VirtIO Controller" --port 0 --device 0 --type hdd --medium "{{ hostvars['sno1'].raw_path }}" --nonrotational on || true
         VBoxManage storageattach "{{ item }}" --storagectl "VirtIO Controller" --port 1 --device 0 --type dvddrive --medium "{{ hostvars['sno1'].iso_path }}" || true
         VBoxManage modifyvm "{{ item }}" --boot1 disk --boot2 dvd --boot3 none --boot4 none
-      loop:
-        - sno1
+      loop: [sno1]
 
     - name: Start VirtualBox VM
       shell: |
         chrt -f 99 VBoxManage startvm "{{ item }}" --type headless
-      loop:
-        - sno1
+      loop: [sno1]
+
     - name: Wait for VBoxHeadless process
       shell: |
         timeout 10 bash -c 'until pgrep -f "VBoxHeadless.*{{ item }}"; do sleep 1; done'
@@ -541,7 +539,7 @@ cat > "$ROOT_DIR/ansible/playbooks/05_create_virtualbox_vm.yaml" <<EOF
         for PID in \$(pgrep -f "VBoxHeadless.*{{ item }}");do
           ionice -c1 -n0 -p \$PID
         done
-      loop: [sno2]
+      loop: [sno1]
   post_tasks:
     - import_tasks: ../common/timer_end.yaml
 EOF

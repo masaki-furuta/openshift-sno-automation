@@ -6,4 +6,5 @@ chrt -p "$VM_PID"
 
 # 2. I/O優先度
 ionice -c1 -n0 -p "$VM_PID"
+ionice -p "$VM_PID"
 
