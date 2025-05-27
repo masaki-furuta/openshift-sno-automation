@@ -1,4 +1,4 @@
-# 🚀 openshift-sno-automation
+# 🚀 openshift-sno-automation (Bash version)
 
 This project provides an automated setup for **Single Node OpenShift (SNO)** 4.18 clusters on **VirtualBox** running on **Fedora 42 Server**.  
 It is designed for repeatable and self-contained deployments using bridged networking.
