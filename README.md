@@ -109,3 +109,22 @@ ansible-playbook -i openshift-sno-automation/ansible/inventory.yaml \
 - No `.j2` templates or `template` module used
 - Designed for easy debugging and reusability
 - Works entirely offline after binary and ISO download
+- ❗ **Important**: Before executing Ansible playbooks, ensure that your `inventory.yaml` contains correct values for your laptop's **Wi-Fi interface** if using bridged networking. Specifically:
+  - `ansible_host`: Static IP address assigned to the VirtualBox SNO VM
+  - `ansible_interface`: Name of the Wi-Fi interface on your host (e.g. `wlp3s0`, `wlan0`)
+  - `ipv4_gateway`: Your Wi-Fi router’s IP address (default gateway)
+  - `dns_servers`: Usually your router (e.g. `192.168.1.1`) or public DNS like `8.8.8.8`
+  
+Example snippet:
+```yaml
+all:
+  hosts:
+    sno1:
+      ansible_host: 192.168.1.100
+      ansible_interface: wlp3s0
+      ipv4_gateway: 192.168.1.1
+      dns_servers:
+        - 192.168.1.1
+```
+
+Ensure these values reflect your actual laptop network configuration before deployment.
