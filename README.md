@@ -47,7 +47,6 @@ This script is the main entry point. It:
 - Runs `openshift-install agent create ignition-configs`
 - Generates the `agent.x86_64.iso`
 - Sets up tmux environment for easy monitoring
-- Optionally executes the Ansible workflow
 - Backs up previous artifacts to `deployment/previous-run/`
 
 ---
@@ -69,6 +68,7 @@ cp ~/Downloads/pull-secret.txt secrets/pull-secret.txt
 ### 2. Install Required Tools
 
 ```bash
+./contrib/install-required-rpms.sh
 ./contrib/install-openshift-bin.sh
 ./contrib/install-virtualbox-vnc.sh
 ```
