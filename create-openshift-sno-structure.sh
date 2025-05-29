@@ -394,7 +394,7 @@ cat > "$ROOT_DIR/ansible/playbooks/03_create_agent_iso.yaml" <<EOF
 EOF
 
 # 04_configure_hypervisor_access.yaml
-REV_ID="${REV_ID:-}"
+REV_IP="${REV_IP:-}"
 cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
 ---
 # Configure SSH and DNS settings on the hypervisor
@@ -453,8 +453,8 @@ cat > "$ROOT_DIR/ansible/playbooks/04_configure_hypervisor_access.yaml" <<EOF
         content: |
           address=/.apps.sno-cluster.test/$SNO_IP
           address=/sno-cluster.test/$SNO_IP
-          ptr-record=$REV_ID.in-addr.arpa,sno1.sno-cluster.test
-          ptr-record=$REV_ID.in-addr.arpa,api.apps.sno-cluster.test
+          ptr-record=$REV_IP.in-addr.arpa,sno1.sno-cluster.test
+          ptr-record=$REV_IP.in-addr.arpa,api.apps.sno-cluster.test
           no-resolv
         mode: '0644'
 
